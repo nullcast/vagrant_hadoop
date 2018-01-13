@@ -46,19 +46,19 @@ Vagrant.configure("2") do |config|
   # the path on the host to the actual folder. The second argument is
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
-  # config.vm.synced_folder "../data", "/vagrant_data"
+  config.vm.synced_folder "./", "/vagrant"
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  # config.vm.provider "virtualbox" do |vb|
-  #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
-  #
-  #   # Customize the amount of memory on the VM:
-  #   vb.memory = "1024"
-  # end
+  config.vm.provider "virtualbox" do |vb|
+    # Display the VirtualBox GUI when booting the machine
+    vb.gui = false
+  
+    # Customize the amount of memory on the VM:
+    vb.memory = "8192"
+  end
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -72,43 +72,51 @@ Vagrant.configure("2") do |config|
   # SHELL
 
   config.vm.provision "shell", path: "./provision-script/common-setting.sh", :privileged => true
-  config.vm.provision "shell", path: "./provision-script/hadoop-setup.sh", :privileged => true
 
   config.vm.define "node1" do |node1|
-    node1.vm.hostname = "node1"
     node1.vm.network "private_network", ip: "192.168.33.11", virtualbox__intnet: "intnet"
     node1.vm.provision "shell", inline: <<-SHELL
       hostname node1
       echo "node1" | sudo tee /etc/hostname > /dev/null
       # Hadoop
+      wget http://ftp.riken.jp/net/apache/hadoop/common/hadoop-2.8.2/hadoop-2.8.2.tar.gz
+      tar xf hadoop-2.8.2.tar.gz
       mkdir /home/vagrant/hadoop-2.8.2
-      mount --bind /vagrant/hadoop-2.8.2 /home/vagrant/hadoop-2.8.2
+      mount --bind ./hadoop-2.8.2 /home/vagrant/hadoop-2.8.2
+      chmod 777 -R /home/vagrant/hadoop-2.8.2
     SHELL
+    node1.vm.provision "shell", path: "./provision-script/hadoop-setup.sh", :privileged => true
   end
 
   config.vm.define "node2" do |node2|
-    node2.vm.hostname = "node2"
     node2.vm.network "private_network", ip: "192.168.33.12", virtualbox__intnet: "intnet"
     node2.vm.provision "shell", inline: <<-SHELL
       hostname node2
       echo "node2" | sudo tee /etc/hostname > /dev/null
       # Hadoop
+      wget http://ftp.riken.jp/net/apache/hadoop/common/hadoop-2.8.2/hadoop-2.8.2.tar.gz
+      tar xf hadoop-2.8.2.tar.gz
       mkdir /home/vagrant/hadoop-2.8.2
-      mount --bind /vagrant/hadoop-2.8.2 /home/vagrant/hadoop-2.8.2
+      mount --bind ./hadoop-2.8.2 /home/vagrant/hadoop-2.8.2
+      chmod 777 -R /home/vagrant/hadoop-2.8.2
     SHELL
+    node2.vm.provision "shell", path: "./provision-script/hadoop-setup.sh", :privileged => true
   end
 
   config.vm.define "master" do |master|
-    master.vm.hostname = "master"
-    master.vm.network "private_network", ip: "192.168.33.100"
+    master.vm.network "forwarded_port", guest: 9000, host: 9000
     master.vm.network "private_network", ip: "192.168.33.10", virtualbox__intnet: "intnet"
     master.vm.provision "shell", inline: <<-SHELL
       hostname master
       echo "master" | tee /etc/hostname > /dev/null
       # Hadoop
+      wget http://ftp.riken.jp/net/apache/hadoop/common/hadoop-2.8.2/hadoop-2.8.2.tar.gz
+      tar xf hadoop-2.8.2.tar.gz
       mkdir /home/vagrant/hadoop-2.8.2
-      mount --bind /vagrant/hadoop-2.8.2 /home/vagrant/hadoop-2.8.2
+      mount --bind ./hadoop-2.8.2 /home/vagrant/hadoop-2.8.2
+      chmod 777 -R /home/vagrant/hadoop-2.8.2
     SHELL
     #master.vm.provision "shell", run: "always", path: "./provision-script/setup-setting.sh", :privileged => true
+    master.vm.provision "shell", path: "./provision-script/hadoop-setup.sh", :privileged => true
   end
 end
